@@ -486,6 +486,13 @@ app.get('/api/reports/pending-payments', async (req, res) => {
     }
 });
 
+// Serve frontend
+app.use(express.static(path.join(__dirname)));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n========================================`);
