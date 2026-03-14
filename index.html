@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pot Black - Enhanced</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        header h1 { font-size: 32px; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 14px; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #4a5568;
+            transition: all 0.2s;
+        }
+        .tab:hover { background: #f7fafc; }
+        .tab.active { background: #667eea; color: white; }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .card h2 { font-size: 22px; margin-bottom: 20px; color: #2d3748; }
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .table-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+        .table-card.active { border-color: #48bb78; background: #f0fff4; }
+        .table-card.available { cursor: pointer; }
+        .table-card.available:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .table-type { font-weight: 600; font-size: 18px; color: #2d3748; }
+        .table-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-available { background: #c6f6d5; color: #22543d; }
+        .status-active { background: #fed7d7; color: #742a2a; }
+        .table-info { font-size: 14px; color: #718096; margin-bottom: 8px; }
+        .table-price {
+            font-size: 16px;
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 10px;
+        }
+        .timer {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f56565;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-danger { background: #f56565; color: white; }
+        .btn-danger:hover:not(:disabled) { background: #e53e3e; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover:not(:disabled) { background: #38a169; }
+        .btn-small { padding: 8px 16px; font-size: 14px; }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #718096;
+        }
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        input:disabled, select:disabled {
+            background: #f7fafc;
+            cursor: not-allowed;
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th {
+            background: #f7fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        tr:hover { background: #f7fafc; }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: #c6f6d5; color: #22543d; }
+        .badge-warning { background: #feebc8; color: #744210; }
+        .badge-danger { background: #fed7d7; color: #742a2a; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-label { font-size: 13px; opacity: 0.9; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 700; }
+        .amount-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .amount-box-primary { background: #e6f2ff; border: 2px solid #667eea; }
+        .amount-box-success { background: #f0fff4; border: 2px solid #48bb78; }
+        .amount-box-warning { background: #fff3cd; border: 2px solid #ffa500; }
+        .amount-label { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .amount-value { font-size: 24px; font-weight: 700; color: #667eea; }
+        .beverage-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .beverage-item select { flex: 2; }
+        .beverage-item input { flex: 1; }
+        .beverage-item button {
+            padding: 10px 15px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .export-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+const API_BASE = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3001/api' 
+    : `${window.location.origin}/api`;
+```
+
+### 1.5 Create `.gitignore` file
+
+Create a new file called `.gitignore`:
+```
+node_modules/
+*.log
+.DS_Store
+.env
+billiards.db
+
+const roundAmount = (amount) => Math.round(parseFloat(amount) || 0);
+
+const exportToExcel = (data, filename) => {
+    if (!data || data.length === 0) {
+        alert('No data to export');
+        return;
+    }
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(',')];
+    data.forEach(row => {
+        const values = headers.map(h => `"${row[h] || ''}"`);
+        csvRows.push(values.join(','));
+    });
+    const csv = csvRows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+};
+
+function App() {
+    const [currentUser, setCurrentUser] = useState(null);
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [message, setMessage] = useState(null);
+
+    useEffect(() => {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            setCurrentUser(JSON.parse(savedUser));
+        }
+    }, []);
+
+    const showMessage = (text, type = 'success') => {
+        setMessage({ text, type });
+        setTimeout(() => setMessage(null), 3000);
+    };
+
+    const handleLogin = (user) => {
+        setCurrentUser(user);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+    };
+
+    const handleLogout = () => {
+        setCurrentUser(null);
+        localStorage.removeItem('currentUser');
+        setActiveTab('dashboard');
+    };
+
+    if (!currentUser) {
+        return <LoginPage onLogin={handleLogin} showMessage={showMessage} />;
+    }
+
+    return (
+        <div className="container">
+            <header>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div>
+                        <h1>🎱 Pot Black Billiards & Snooker Academy</h1>
+                        <p>Enhanced booking system with beverage management</p>
+                    </div>
+                    <div style={{textAlign: 'right'}}>
+                        <div style={{marginBottom: '5px'}}>
+                            <strong>{currentUser.fullName}</strong> ({currentUser.role})
+                        </div>
+                        <button onClick={handleLogout} className="btn btn-danger btn-small">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {message && (
+                <div className={`alert alert-${message.type}`}>
+                    {message.text}
+                </div>
+            )}
+
+            <div className="tabs">
+                <button className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`} 
+                        onClick={() => setActiveTab('dashboard')}>Dashboard</button>
+                <button className={`tab ${activeTab === 'bookings' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('bookings')}>All Bookings</button>
+                <button className={`tab ${activeTab === 'reports' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('reports')}>Reports</button>
+                <button className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('pending')}>Pending Payments</button>
+                {currentUser.role === 'admin' && (
+                    <button className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('settings')}>⚙️ Settings</button>
+                )}
+            </div>
+
+            {activeTab === 'dashboard' && <Dashboard showMessage={showMessage} currentUser={currentUser} />}
+            {activeTab === 'bookings' && <AllBookings showMessage={showMessage} />}
+            {activeTab === 'reports' && <Reports />}
+            {activeTab === 'pending' && <PendingPayments showMessage={showMessage} />}
+            {activeTab === 'settings' && currentUser.role === 'admin' && <Settings showMessage={showMessage} />}
+        </div>
+    );
+}
+
+function LoginPage({ onLogin, showMessage }) {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (res.ok) {
+                const user = await res.json();
+                onLogin(user);
+                showMessage('Login successful!');
+            } else {
+                const error = await res.json();
+                showMessage(error.error || 'Login failed', 'error');
+            }
+        } catch (err) {
+            showMessage('Error: ' + err.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        }}>
+            <div style={{
+                background: 'white',
+                padding: '40px',
+                borderRadius: '12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                width: '100%',
+                maxWidth: '400px'
+            }}>
+                <div style={{textAlign: 'center', marginBottom: '30px'}}>
+                    <h1 style={{fontSize: '28px', marginBottom: '10px', color: '#2d3748'}}>
+                        🎱 Pot Black
+                    </h1>
+                    <p style={{color: '#718096'}}>Billiards & Snooker Academy</p>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label>Username</label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            autoFocus
+                            placeholder="Enter username"
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="Enter password"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{width: '100%'}}
+                        disabled={loading}
+                    >
+                        {loading ? 'Logging in...' : 'Login'}
+                    </button>
+                </form>
+
+                <div style={{
+                    marginTop: '20px',
+                    padding: '15px',
+                    background: '#f7fafc',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#4a5568'
+                }}>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Dashboard({ showMessage, currentUser }) {
+    const [tableTypes, setTableTypes] = useState([]);
+    const [activeBookings, setActiveBookings] = useState([]);
+    const [selectedTable, setSelectedTable] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        fetchTableTypes();
+        fetchActiveBookings();
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+            fetchActiveBookings();
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const fetchTableTypes = async () => {
+        const res = await fetch(`${API_BASE}/table-types`);
+        const data = await res.json();
+        setTableTypes(data);
+    };
+
+    const fetchActiveBookings = async () => {
+        const res = await fetch(`${API_BASE}/bookings/active`);
+        const data = await res.json();
+        setActiveBookings(data);
+    };
+
+    const getAvailableTables = (typeId, quantity) => {
+        const occupied = activeBookings.filter(b => b.table_type_id === typeId).map(b => b.table_number);
+        const available = [];
+        for (let i = 1; i <= quantity; i++) {
+            if (!occupied.includes(i)) available.push(i);
+        }
+        return available;
+    };
+
+    const calculateDuration = (startTime) => {
+        const start = new Date(startTime);
+        const diff = Math.floor((currentTime - start) / 1000);
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <>
+            <div className="card">
+                <h2>Active Tables</h2>
+                <div className="table-grid">
+                    {tableTypes.map(type => {
+                        const availableTables = getAvailableTables(type.id, type.quantity);
+                        const occupiedBookings = activeBookings.filter(b => b.table_type_id === type.id);
+
+                        return (
+                            <React.Fragment key={type.id}>
+                                {occupiedBookings.map(booking => (
+                                    <div key={booking.id} className="table-card active">
+                                        <div className="table-header">
+                                            <div className="table-type">{type.type_code} - Table {booking.table_number}</div>
+                                            <div className="table-status status-active">IN USE</div>
+                                        </div>
+                                        <div className="table-info">Customer: {booking.customer_name}</div>
+                                        <div className="table-info">Started: {new Date(booking.start_time).toLocaleTimeString()}</div>
+                                        <div className="timer">{calculateDuration(booking.start_time)}</div>
+                                        <div className="table-price">₹{roundAmount(type.price_per_hour)}/hour</div>
+                                        <button className="btn btn-danger" style={{width: '100%', marginTop: '10px'}}
+                                                onClick={() => { setSelectedTable({ booking, tableType: type }); setShowModal(true); }}>
+                                            End Session
+                                        </button>
+                                    </div>
+                                ))}
+
+                                {availableTables.map(tableNum => (
+                                    <div key={`${type.id}-${tableNum}`} className="table-card available"
+                                         onClick={() => { setSelectedTable({ tableType: type, tableNumber: tableNum }); setShowModal(true); }}>
+                                        <div className="table-header">
+                                            <div className="table-type">{type.type_code} - Table {tableNum}</div>
+                                            <div className="table-status status-available">AVAILABLE</div>
+                                        </div>
+                                        <div className="table-info">{type.type_name}</div>
+                                        <div className="table-price">₹{roundAmount(type.price_per_hour)}/hour</div>
+                                        <button className="btn btn-success" style={{width: '100%', marginTop: '10px'}}>
+                                            Start Session
+                                        </button>
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {showModal && (
+                <BookingModal selectedTable={selectedTable}
+                             onClose={() => { setShowModal(false); setSelectedTable(null); fetchActiveBookings(); }}
+                             showMessage={showMessage}
+                             currentUser={currentUser} />
+            )}
+        </>
+    );
+}
+
+function BookingModal({ selectedTable, onClose, showMessage, currentUser }) {
+    const [customerName, setCustomerName] = useState('');
+    const [amountPaid, setAmountPaid] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [notes, setNotes] = useState('');
+    const [beverages, setBeverages] = useState([]);
+    const [selectedBeverages, setSelectedBeverages] = useState([]);
+    const [playedAmount, setPlayedAmount] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const isEndingSession = selectedTable.booking !== undefined;
+
+    useEffect(() => {
+        fetchBeverages();
+        if (isEndingSession) calculatePlayedAmount();
+    }, []);
+
+    const fetchBeverages = async () => {
+        const res = await fetch(`${API_BASE}/beverages`);
+        const data = await res.json();
+        setBeverages(data);
+    };
+
+    const calculatePlayedAmount = () => {
+        const startTime = new Date(selectedTable.booking.start_time);
+        const endTime = new Date();
+        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+        const amount = durationHours * selectedTable.tableType.price_per_hour;
+        setPlayedAmount(roundAmount(amount));
+    };
+
+    const addBeverage = () => {
+        setSelectedBeverages([...selectedBeverages, { beverage_id: '', quantity: 1 }]);
+    };
+
+    const removeBeverage = (index) => {
+        setSelectedBeverages(selectedBeverages.filter((_, i) => i !== index));
+    };
+
+    const updateBeverage = (index, field, value) => {
+        const updated = [...selectedBeverages];
+        updated[index][field] = value;
+        setSelectedBeverages(updated);
+    };
+
+    const calculateBeverageCost = () => {
+        return selectedBeverages.reduce((total, item) => {
+            const beverage = beverages.find(b => b.id === parseInt(item.beverage_id));
+            if (beverage) return total + (beverage.price * item.quantity);
+            return total;
+        }, 0);
+    };
+
+    const calculateTotalAmount = () => {
+        return roundAmount(playedAmount + calculateBeverageCost());
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            if (isEndingSession) {
+                const res = await fetch(`${API_BASE}/bookings/${selectedTable.booking.id}/end`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount_paid: parseFloat(amountPaid) || 0,
+                        payment_method: paymentMethod,
+                        notes,
+                        beverages: selectedBeverages.filter(b => b.beverage_id),
+                        created_by: currentUser.username
+                    })
+                });
+
+                if (res.ok) {
+                    showMessage('Session ended successfully!');
+                    onClose();
+                } else {
+                    const error = await res.json();
+                    showMessage(error.error || 'Error ending session', 'error');
+                }
+            } else {
+                if (!customerName.trim()) {
+                    alert('Please enter customer name');
+                    setLoading(false);
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/bookings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        table_type_id: selectedTable.tableType.id,
+                        table_number: selectedTable.tableNumber,
+                        customer_name: customerName,
+                        created_by: currentUser.username
+                    })
+                });
+
+                if (res.ok) {
+                    showMessage('Session started successfully!');
+                    onClose();
+                } else {
+                    const error = await res.json();
+                    showMessage(error.error || 'Error starting session', 'error');
+                }
+            }
+        } catch (err) {
+            showMessage('Error: ' + err.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="modal">
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h2>{isEndingSession ? 'End Session' : 'Start New Session'}</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    {!isEndingSession ? (
+                        <>
+                            <div className="form-group">
+                                <label>Table</label>
+                                <input type="text" value={`${selectedTable.tableType.type_code} - Table ${selectedTable.tableNumber}`} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>Rate</label>
+                                <input type="text" value={`₹${roundAmount(selectedTable.tableType.price_per_hour)}/hour`} disabled />
+                            </div>
+                            <div className="form-group">
+                                <label>Customer Name *</label>
+                                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required autoFocus />
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="form-group">
+                                <label>Customer</label>
+                                <input type="text" value={selectedTable.booking.customer_name} disabled />
+                            </div>
+
+                            <div className="amount-box amount-box-success">
+                                <div className="amount-label">Played Amount</div>
+                                <div className="amount-value">₹{playedAmount}</div>
+                            </div>
+
+                            <div className="form-group">
+                                <div className="flex-between" style={{marginBottom: '10px'}}>
+                                    <label style={{margin: 0}}>Beverages</label>
+                                    <button type="button" onClick={addBeverage} className="btn btn-primary btn-small">
+                                        + Add Beverage
+                                    </button>
+                                </div>
+
+                                {selectedBeverages.map((item, index) => (
+                                    <div key={index} className="beverage-item">
+                                        <select value={item.beverage_id} onChange={(e) => updateBeverage(index, 'beverage_id', e.target.value)}>
+                                            <option value="">Select beverage</option>
+                                            {beverages.map(bev => (
+                                                <option key={bev.id} value={bev.id}>{bev.name} - ₹{roundAmount(bev.price)}</option>
+                                            ))}
+                                        </select>
+                                        <input type="number" min="1" value={item.quantity} 
+                                               onChange={(e) => updateBeverage(index, 'quantity', parseInt(e.target.value))} />
+                                        <button type="button" onClick={() => removeBeverage(index)}>×</button>
+                                    </div>
+                                ))}
+
+                                {selectedBeverages.length > 0 && (
+                                    <div className="amount-box amount-box-warning" style={{marginTop: '10px'}}>
+                                        <strong>Beverage Cost: ₹{roundAmount(calculateBeverageCost())}</strong>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="amount-box amount-box-primary">
+                                <div className="amount-label">Total Amount</div>
+                                <div className="amount-value">₹{calculateTotalAmount()}</div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Amount Paid</label>
+                                <input type="number" step="0.01" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} 
+                                       placeholder="Enter amount paid" />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Payment Method</label>
+                                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                                    <option>Cash</option>
+                                    <option>Card</option>
+                                    <option>UPI</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Notes</label>
+                                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" />
+                            </div>
+                        </>
+                    )}
+
+                    <button type="submit" className={`btn ${isEndingSession ? 'btn-danger' : 'btn-primary'}`} 
+                            style={{width: '100%'}} disabled={loading}>
+                        {loading ? 'Processing...' : (isEndingSession ? 'End Session' : 'Start Session')}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Keep all other functions (AllBookings, Reports, PendingPayments, PaymentModal) the same
+// Just add the Users management section to Settings
+
+function Settings({ showMessage }) {
+    const [activeSection, setActiveSection] = useState('tables');
+    const [tableTypes, setTableTypes] = useState([]);
+    const [beverages, setBeverages] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [editingId, setEditingId] = useState(null);
+    const [formData, setFormData] = useState({});
+
+    useEffect(() => {
+        fetchTableTypes();
+        fetchBeverages();
+        fetchUsers();
+    }, []);
+
+    const fetchTableTypes = async () => {
+        const res = await fetch(`${API_BASE}/table-types`);
+        const data = await res.json();
+        setTableTypes(data);
+    };
+
+    const fetchBeverages = async () => {
+        const res = await fetch(`${API_BASE}/beverages`);
+        const data = await res.json();
+        setBeverages(data);
+    };
+
+    const fetchUsers = async () => {
+        const res = await fetch(`${API_BASE}/users`);
+        const data = await res.json();
+        setUsers(data);
+    };
+
+    const handleSaveTable = async (id) => {
+        try {
+            const res = await fetch(`${API_BASE}/table-types/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (res.ok) {
+                showMessage('Table type updated!');
+                setEditingId(null);
+                fetchTableTypes();
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    };
+
+    const handleDeleteTable = async (id) => {
+        if (confirm('Delete this table type?')) {
+            try {
+                const res = await fetch(`${API_BASE}/table-types/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showMessage('Table type deleted!');
+                    fetchTableTypes();
+                } else {
+                    const error = await res.json();
+                    showMessage(error.error || 'Cannot delete table type', 'error');
+                }
+            } catch (err) {
+                showMessage(err.message, 'error');
+            }
+        }
+    };
+
+    const handleSaveBeverage = async (id) => {
+        try {
+            const res = await fetch(`${API_BASE}/beverages/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (res.ok) {
+                showMessage('Beverage updated!');
+                setEditingId(null);
+                fetchBeverages();
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    };
+
+    const handleAddBeverage = async () => {
+    const name = prompt('Enter beverage name:');
+    const price = prompt('Enter price:');
+    if (name && price) {
+        try {
+            const res = await fetch(`${API_BASE}/beverages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, price: parseFloat(price) })
+            });
+            if (res.ok) {
+                showMessage('Beverage added!');
+                fetchBeverages();
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    }
+};
+
+const handleDeleteBeverage = async (id) => {
+    if (confirm('Delete this beverage?')) {
+        try {
+            const res = await fetch(`${API_BASE}/beverages/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showMessage('Beverage deleted!');
+                fetchBeverages();
+            } else {
+                showMessage('Cannot delete beverage in use', 'error');
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    }
+};
+
+const handleAddTable = async () => {
+    const type_code = prompt('Enter table code (e.g., PB, SN):');
+    const type_name = prompt('Enter table name:');
+    const quantity = prompt('Enter number of tables:');
+    const price_per_hour = prompt('Enter price per hour:');
+
+    if (type_code && type_name && quantity && price_per_hour) {
+        try {
+            const res = await fetch(`${API_BASE}/table-types`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type_code,
+                    type_name,
+                    quantity: parseInt(quantity),
+                    price_per_hour: parseFloat(price_per_hour)
+                })
+            });
+            if (res.ok) {
+                showMessage('Table type added!');
+                fetchTableTypes();
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    }
+};
+
+const handleAddUser = async () => {
+    const username = prompt('Enter username:');
+    const password = prompt('Enter password:');
+    const full_name = prompt('Enter full name:');
+    const role = prompt('Enter role (admin/user):');
+
+    if (username && password && full_name && role) {
+        try {
+            const res = await fetch(`${API_BASE}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, full_name, role })
+            });
+            if (res.ok) {
+                showMessage('User added!');
+                fetchUsers();
+            } else {
+                const error = await res.json();
+                showMessage(error.error || 'Error adding user', 'error');
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    }
+};
+
+const handleSaveUser = async (id) => {
+    try {
+        const res = await fetch(`${API_BASE}/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if (res.ok) {
+            showMessage('User updated!');
+            setEditingId(null);
+            fetchUsers();
+        } else {
+            const error = await res.json();
+            showMessage(error.error || 'Error updating user', 'error');
+        }
+    } catch (err) {
+        showMessage(err.message, 'error');
+    }
+};
+
+const handleDeleteUser = async (id) => {
+    if (confirm('Delete this user?')) {
+        try {
+            const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showMessage('User deleted!');
+                fetchUsers();
+            } else {
+                const error = await res.json();
+                showMessage(error.error || 'Cannot delete user', 'error');
+            }
+        } catch (err) {
+            showMessage(err.message, 'error');
+        }
+    }
+};
+
+return (
+    <div className="card">
+        <h2>Settings</h2>
+
+        <div className="tabs" style={{marginBottom: '20px'}}>
+            <button className={`tab ${activeSection === 'tables' ? 'active' : ''}`}
+                    onClick={() => setActiveSection('tables')}>Tables</button>
+            <button className={`tab ${activeSection === 'beverages' ? 'active' : ''}`}
+                    onClick={() => setActiveSection('beverages')}>Beverages</button>
+            <button className={`tab ${activeSection === 'users' ? 'active' : ''}`}
+                    onClick={() => setActiveSection('users')}>Users</button>
+        </div>
+
+        {activeSection === 'tables' && (
+            <>
+                <div className="flex-between" style={{marginBottom: '15px'}}>
+                    <h3>Table Configuration</h3>
+                    <button className="btn btn-primary" onClick={handleAddTable}>+ Add Table</button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Quantity</th>
+                            <th>Rate/Hour</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tableTypes.map(type => (
+                            <tr key={type.id}>
+                                {editingId === type.id ? (
+                                    <>
+                                        <td><input type="text" value={formData.type_code || ''} 
+                                                  onChange={(e) => setFormData({...formData, type_code: e.target.value})} /></td>
+                                        <td><input type="text" value={formData.type_name || ''}
+                                                  onChange={(e) => setFormData({...formData, type_name: e.target.value})} /></td>
+                                        <td><input type="number" value={formData.quantity || ''}
+                                                  onChange={(e) => setFormData({...formData, quantity: parseInt(e.target.value)})} /></td>
+                                        <td><input type="number" value={formData.price_per_hour || ''}
+                                                  onChange={(e) => setFormData({...formData, price_per_hour: parseFloat(e.target.value)})} /></td>
+                                        <td>
+                                            <button className="btn btn-success btn-small" onClick={() => handleSaveTable(type.id)}>Save</button>
+                                            <button className="btn btn-small" onClick={() => setEditingId(null)} style={{marginLeft: '5px'}}>Cancel</button>
+                                        </td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td>{type.type_code}</td>
+                                        <td>{type.type_name}</td>
+                                        <td>{type.quantity}</td>
+                                        <td>₹{roundAmount(type.price_per_hour)}</td>
+                                        <td>
+                                            <button className="btn btn-primary btn-small"
+                                                    onClick={() => { setEditingId(type.id); setFormData(type); }}>Edit</button>
+                                            <button className="btn btn-danger btn-small" onClick={() => handleDeleteTable(type.id)}
+                                                    style={{marginLeft: '5px'}}>Delete</button>
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </>
+        )}
+
+        {activeSection === 'beverages' && (
+            <>
+                <div className="flex-between" style={{marginBottom: '15px'}}>
+                    <h3>Beverage Management</h3>
+                    <button className="btn btn-primary" onClick={handleAddBeverage}>+ Add Beverage</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {beverages.map(bev => (
+                            <tr key={bev.id}>
+                                {editingId === bev.id ? (
+                                    <>
+                                        <td><input type="text" value={formData.name || ''}
+                                                  onChange={(e) => setFormData({...formData, name: e.target.value})} /></td>
+                                        <td><input type="number" value={formData.price || ''}
+                                                  onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value)})} /></td>
+                                        <td>
+                                            <button className="btn btn-success btn-small" onClick={() => handleSaveBeverage(bev.id)}>Save</button>
+                                            <button className="btn btn-small" onClick={() => setEditingId(null)} style={{marginLeft: '5px'}}>Cancel</button>
+                                        </td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td>{bev.name}</td>
+                                        <td>₹{roundAmount(bev.price)}</td>
+                                        <td>
+                                            <button className="btn btn-primary btn-small"
+                                                    onClick={() => { setEditingId(bev.id); setFormData(bev); }}>Edit</button>
+                                            <button className="btn btn-danger btn-small" onClick={() => handleDeleteBeverage(bev.id)}
+                                                    style={{marginLeft: '5px'}}>Delete</button>
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </>
+        )}
+
+        {activeSection === 'users' && (
+            <>
+                <div className="flex-between" style={{marginBottom: '15px'}}>
+                    <h3>User Management</h3>
+                    <button className="btn btn-primary" onClick={handleAddUser}>+ Add User</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.map(user => (
+                            <tr key={user.id}>
+                                {editingId === user.id ? (
+                                    <>
+                                        <td><input type="text" value={formData.username || ''}
+                                                  onChange={(e) => setFormData({...formData, username: e.target.value})} /></td>
+                                        <td><input type="text" value={formData.full_name || ''}
+                                                  onChange={(e) => setFormData({...formData, full_name: e.target.value})} /></td>
+                                        <td>
+                                            <select value={formData.role || ''} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                                                <option value="admin">Admin</option>
+                                                <option value="user">User</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select value={formData.is_active ? 1 : 0} onChange={(e) => setFormData({...formData, is_active: parseInt(e.target.value)})}>
+                                                <option value="1">Active</option>
+                                                <option value="0">Inactive</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <button className="btn btn-success btn-small" onClick={() => handleSaveUser(user.id)}>Save</button>
+                                            <button className="btn btn-small" onClick={() => setEditingId(null)} style={{marginLeft: '5px'}}>Cancel</button>
+                                        </td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td>{user.username}</td>
+                                        <td>{user.full_name}</td>
+                                        <td><span className={`badge badge-${user.role === 'admin' ? 'danger' : 'success'}`}>{user.role}</span></td>
+                                        <td><span className={`badge badge-${user.is_active ? 'success' : 'warning'}`}>{user.is_active ? 'Active' : 'Inactive'}</span></td>
+                                        <td>
+                                            <button className="btn btn-primary btn-small"
+                                                    onClick={() => { setEditingId(user.id); setFormData(user); }}>Edit</button>
+                                            <button className="btn btn-danger btn-small" onClick={() => handleDeleteUser(user.id)}
+                                                    style={{marginLeft: '5px'}}>Delete</button>
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </>
+        )}
+    </div>
+);
+}
+
+function AllBookings({ showMessage }) {
+    const [bookings, setBookings] = useState([]);
+    const [filters, setFilters] = useState({
+        status: '', paymentStatus: '', paymentMethod: '', customer: '', startDate: '', endDate: ''
+    });
+
+    useEffect(() => {
+        fetchBookings();
+    }, [filters]);
+
+    const fetchBookings = async () => {
+        const params = new URLSearchParams();
+        Object.keys(filters).forEach(key => {
+            if (filters[key]) params.append(key, filters[key]);
+        });
+        const res = await fetch(`${API_BASE}/bookings?${params}`);
+        const data = await res.json();
+        setBookings(data);
+    };
+
+    const handleExport = () => {
+        const exportData = bookings.map(b => ({
+            ID: b.id,
+            Date: new Date(b.start_time).toLocaleDateString(),
+            Customer: b.customer_name,
+            Table: `${b.type_code}-${b.table_number}`,
+            Duration: b.duration_minutes ? `${b.duration_minutes} min` : '-',
+            'Table Amount': roundAmount(b.table_amount || 0),
+            'Beverage Amount': roundAmount(b.beverage_amount || 0),
+            Total: roundAmount(b.total_amount || 0),
+            Paid: roundAmount(b.amount_paid || 0),
+            Pending: roundAmount(b.amount_pending || 0),
+            'Payment Method': b.payment_method || '-',
+            Status: b.payment_status
+        }));
+        exportToExcel(exportData, 'all_bookings');
+        showMessage('Bookings exported successfully!');
+    };
+
+    return (
+        <div className="card">
+            <div className="flex-between" style={{marginBottom: '20px'}}>
+                <h2>All Bookings</h2>
+                <button onClick={handleExport} className="btn btn-success export-btn">
+                    <span>📊</span> Export to Excel
+                </button>
+            </div>
+
+            <div className="filters">
+                <div>
+                    <label>Status</label>
+                    <select value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})}>
+                        <option value="">All</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Payment Status</label>
+                    <select value={filters.paymentStatus} onChange={(e) => setFilters({...filters, paymentStatus: e.target.value})}>
+                        <option value="">All</option>
+                        <option value="paid">Paid</option>
+                        <option value="partial">Partial</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Payment Method</label>
+                    <select value={filters.paymentMethod} onChange={(e) => setFilters({...filters, paymentMethod: e.target.value})}>
+                        <option value="">All</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Customer</label>
+                    <input type="text" value={filters.customer} onChange={(e) => setFilters({...filters, customer: e.target.value})} 
+                           placeholder="Search customer" />
+                </div>
+                <div>
+                    <label>Start Date</label>
+                    <input type="date" value={filters.startDate} onChange={(e) => setFilters({...filters, startDate: e.target.value})} />
+                </div>
+                <div>
+                    <label>End Date</label>
+                    <input type="date" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} />
+                </div>
+            </div>
+
+            <div style={{overflowX: 'auto'}}>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Table</th>
+                            <th>Duration</th>
+                            <th>Table</th>
+                            <th>Beverage</th>
+                            <th>Total</th>
+                            <th>Paid</th>
+                            <th>Pending</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {bookings.map(booking => (
+                            <tr key={booking.id}>
+                                <td>{booking.id}</td>
+                                <td>{new Date(booking.start_time).toLocaleDateString()}</td>
+                                <td>{booking.customer_name}</td>
+                                <td>{booking.type_code}-{booking.table_number}</td>
+                                <td>{booking.duration_minutes ? `${booking.duration_minutes}m` : '-'}</td>
+                                <td>₹{roundAmount(booking.table_amount || 0)}</td>
+                                <td>₹{roundAmount(booking.beverage_amount || 0)}</td>
+                                <td>₹{roundAmount(booking.total_amount || 0)}</td>
+                                <td>₹{roundAmount(booking.amount_paid || 0)}</td>
+                                <td>₹{roundAmount(booking.amount_pending || 0)}</td>
+                                <td>{booking.payment_method || '-'}</td>
+                                <td>
+                                    <span className={`badge badge-${
+                                        booking.payment_status === 'paid' ? 'success' :
+                                        booking.payment_status === 'partial' ? 'warning' : 'danger'
+                                    }`}>{booking.payment_status}</span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function Reports() {
+    const [reportType, setReportType] = useState('table-revenue');
+    const [reportData, setReportData] = useState(null);
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    useEffect(() => {
+        fetchReport();
+    }, [reportType, date, startDate, endDate]);
+
+    const fetchReport = async () => {
+        if (reportType === 'table-revenue') {
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            const res = await fetch(`${API_BASE}/reports/table-revenue?${params}`);
+            const data = await res.json();
+            setReportData(data);
+        } else if (reportType === 'beverage') {
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            const res = await fetch(`${API_BASE}/reports/beverage-revenue?${params}`);
+            const data = await res.json();
+            setReportData(data);
+        }
+    };
+
+    return (
+        <div className="card">
+            <h2>Reports</h2>
+            
+            <div className="filters">
+                <div>
+                    <label>Report Type</label>
+                    <select value={reportType} onChange={(e) => setReportType(e.target.value)}>
+                        <option value="table-revenue">Table Revenue</option>
+                        <option value="beverage">Beverage Revenue</option>
+                    </select>
+                </div>
+                {reportType === 'table-revenue' && (
+                    <>
+                        <div>
+                            <label>Start Date</label>
+                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                        </div>
+                        <div>
+                            <label>End Date</label>
+                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                        </div>
+                    </>
+                )}
+                            
+                {reportType === 'beverage' && (
+                    <>
+                        <div>
+                            <label>Start Date</label>
+                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                        </div>
+                        <div>
+                            <label>End Date</label>
+                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {reportData && reportData.summary && (
+                <>
+                    {reportType === 'beverage' ? (
+                        <>
+                            <div className="stats-grid">
+                                <div className="stat-card">
+                                    <div className="stat-label">Total Beverage Revenue</div>
+                                    <div className="stat-value">₹{roundAmount(reportData.summary.total_beverage_revenue || 0)}</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-label">Total Orders</div>
+                                    <div className="stat-value">{reportData.summary.total_orders || 0}</div>
+                                </div>
+                            </div>
+
+                            <h3 style={{marginTop: '20px', marginBottom: '15px'}}>By Beverage</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Beverage</th>
+                                        <th>Quantity Sold</th>
+                                        <th>Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reportData.items && reportData.items.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>{item.name}</td>
+                                            <td>{item.total_quantity}</td>
+                                            <td>₹{roundAmount(item.total_revenue)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </>
+                    ) : (
+                        <>
+                            <div className="stats-grid">
+                                <div className="stat-card">
+                                    <div className="stat-label">Total Bookings</div>
+                                    <div className="stat-value">{reportData.summary.total_bookings || 0}</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-label">Total Revenue</div>
+                                    <div className="stat-value">₹{roundAmount(reportData.summary.total_revenue || 0)}</div>
+                                </div>
+                            </div>
+
+                            {reportData.byTableType && (
+                                <>
+                                    <h3 style={{marginTop: '20px', marginBottom: '15px'}}>By Table Type</h3>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Table Type</th>
+                                                <th>Bookings</th>
+                                                <th>Revenue</th>
+                                                <th>Hours</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.byTableType.map((item, index) => (
+                                                <tr key={index}>
+                                                    <td>{item.type_name}</td>
+                                                    <td>{item.bookings}</td>
+                                                    <td>₹{roundAmount(item.revenue)}</td>
+                                                    <td>{(item.minutes / 60).toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </>
+                            )}
+                        </>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+function PendingPayments({ showMessage }) {
+    const [pendingData, setPendingData] = useState(null);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [filters, setFilters] = useState({ customer: '', startDate: '', endDate: '' });
+
+    useEffect(() => {
+        fetchPendingPayments();
+    }, [filters]);
+
+    const fetchPendingPayments = async () => {
+        const params = new URLSearchParams();
+        Object.keys(filters).forEach(key => {
+            if (filters[key]) params.append(key, filters[key]);
+        });
+        const res = await fetch(`${API_BASE}/reports/pending-payments?${params}`);
+        const data = await res.json();
+        setPendingData(data);
+    };
+
+    const handleExport = () => {
+        if (!pendingData || !pendingData.bookings) return;
+        const exportData = pendingData.bookings.map(b => ({
+            ID: b.id,
+            Date: new Date(b.start_time).toLocaleDateString(),
+            Customer: b.customer_name,
+            Table: `${b.type_code}-${b.table_number}`,
+            'Total Amount': roundAmount(b.total_amount),
+            'Amount Paid': roundAmount(b.amount_paid),
+            'Amount Pending': roundAmount(b.amount_pending),
+            'Payment Method': b.payment_method || '-'
+        }));
+        exportToExcel(exportData, 'pending_payments');
+        showMessage('Pending payments exported successfully!');
+    };
+
+    return (
+        <>
+            <div className="card">
+                <div className="flex-between" style={{marginBottom: '20px'}}>
+                    <h2>Pending Payments</h2>
+                    <button onClick={handleExport} className="btn btn-success export-btn">
+                        <span>📊</span> Export to Excel
+                    </button>
+                </div>
+
+                <div className="filters">
+                    <div>
+                        <label>Customer</label>
+                        <input type="text" value={filters.customer} onChange={(e) => setFilters({...filters, customer: e.target.value})}
+                               placeholder="Search customer" />
+                    </div>
+                    <div>
+                        <label>Start Date</label>
+                        <input type="date" value={filters.startDate} onChange={(e) => setFilters({...filters, startDate: e.target.value})} />
+                    </div>
+                    <div>
+                        <label>End Date</label>
+                        <input type="date" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} />
+                    </div>
+                </div>
+                
+                {pendingData && (
+                    <>
+                        <div className="stats-grid">
+                            <div className="stat-card">
+                                <div className="stat-label">Total Pending</div>
+                                <div className="stat-value">{pendingData.summary.total_count || 0}</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-label">Amount Pending</div>
+                                <div className="stat-value">₹{roundAmount(pendingData.summary.total_pending || 0)}</div>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Table</th>
+                                    <th>Total</th>
+                                    <th>Paid</th>
+                                    <th>Pending</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pendingData.bookings && pendingData.bookings.map(booking => (
+                                    <tr key={booking.id}>
+                                        <td>{new Date(booking.start_time).toLocaleDateString()}</td>
+                                        <td>{booking.customer_name}</td>
+                                        <td>{booking.type_code}-{booking.table_number}</td>
+                                        <td>₹{roundAmount(booking.total_amount)}</td>
+                                        <td>₹{roundAmount(booking.amount_paid)}</td>
+                                        <td>₹{roundAmount(booking.amount_pending)}</td>
+                                        <td>
+                                            <button className="btn btn-primary btn-small"
+                                                    onClick={() => { setSelectedBooking(booking); setShowModal(true); }}>
+                                                Add Payment
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </>
+                )}
+            </div>
+
+            {showModal && (
+                <PaymentModal booking={selectedBooking}
+                             onClose={() => { setShowModal(false); setSelectedBooking(null); fetchPendingPayments(); }}
+                             showMessage={showMessage} />
+            )}
+        </>
+    );
+}
+
+function PaymentModal({ booking, onClose, showMessage }) {
+    const [amount, setAmount] = useState(booking.amount_pending);
+    const [method, setMethod] = useState('Cash');
+    const [notes, setNotes] = useState('');
+    const [loading, setLoading] = useState(false);
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+        const res = await fetch(`${API_BASE}/bookings/${booking.id}/payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                payment_amount: parseFloat(amount),
+                payment_method: method,
+                notes,
+                created_by: 'Admin'
+            })
+        });
+
+        if (res.ok) {
+            showMessage('Payment recorded successfully!');
+            onClose();
+        } else {
+            const error = await res.json();
+            showMessage(error.error || 'Error recording payment', 'error');
+        }
+    } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+    } finally {
+        setLoading(false);
+    }
+};
+
+return (
+    <div className="modal">
+        <div className="modal-content">
+            <div className="modal-header">
+                <h2>Record Payment</h2>
+                <button className="close-btn" onClick={onClose}>×</button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                    <label>Customer</label>
+                    <input type="text" value={booking.customer_name} disabled />
+                </div>
+                <div className="form-group">
+                    <label>Total Amount</label>
+                    <input type="text" value={`₹${roundAmount(booking.total_amount)}`} disabled />
+                </div>
+                <div className="form-group">
+                    <label>Already Paid</label>
+                    <input type="text" value={`₹${roundAmount(booking.amount_paid)}`} disabled />
+                </div>
+                <div className="form-group">
+                    <label>Payment Amount *</label>
+                    <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}
+                           required max={booking.amount_pending} />
+                </div>
+                <div className="form-group">
+                    <label>Payment Method</label>
+                    <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                        <option>Cash</option>
+                        <option>Card</option>
+                        <option>UPI</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Notes</label>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{width: '100%'}} disabled={loading}>
+                    {loading ? 'Processing...' : 'Record Payment'}
+                </button>
+            </form>
+        </div>
+    </div>
+);
+}
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
