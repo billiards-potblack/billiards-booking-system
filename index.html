@@ -598,6 +598,9 @@ function BookingModal({ selectedTable, onClose, showMessage, currentUser }) {
     const [selectedBeverages, setSelectedBeverages] = useState([]);
     const [playedAmount, setPlayedAmount] = useState(0);
     const [loading, setLoading] = useState(false);
+    // Bug Fix 6: Capture the exact end time once when the modal opens, 
+    // so submitting later doesn't recalculate with a newer timestamp.
+    const sessionEndTime = React.useRef(new Date());
 
     const isEndingSession = selectedTable.booking !== undefined;
 
@@ -614,7 +617,8 @@ function BookingModal({ selectedTable, onClose, showMessage, currentUser }) {
 
     const calculatePlayedAmount = () => {
         const startTime = new Date(selectedTable.booking.start_time);
-        const endTime = new Date();
+        // Bug Fix 6: Use the snapshotted end time, not `new Date()` which would drift
+        const endTime = sessionEndTime.current;
         const durationHours = (endTime - startTime) / (1000 * 60 * 60);
         const amount = durationHours * selectedTable.tableType.price_per_hour;
         setPlayedAmount(roundAmount(amount));
@@ -660,7 +664,11 @@ function BookingModal({ selectedTable, onClose, showMessage, currentUser }) {
                         payment_method: paymentMethod,
                         notes,
                         beverages: selectedBeverages.filter(b => b.beverage_id),
-                        created_by: currentUser.username
+                        created_by: currentUser.username,
+                        // Bug Fix 6: Send the locked end time and total so server
+                        // doesn't recalculate from a later timestamp
+                        end_time: sessionEndTime.current.toISOString(),
+                        total_amount: calculateTotalAmount()
                     })
                 });
 
