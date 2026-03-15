@@ -64,11 +64,56 @@ CREATE TABLE IF NOT EXISTS audit_log (
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============================================================
+-- Beverages Master Table (Bug Fix 2: was missing entirely)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS beverages (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed a few default beverages so the dropdown isn't empty on first run
+INSERT INTO beverages (name, price) VALUES
+    ('Water', 20.00),
+    ('Soft Drink', 40.00),
+    ('Tea', 30.00),
+    ('Coffee', 50.00)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- Booking Beverages (line items per booking)
+-- (Bug Fix 2 & 3: was missing entirely)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS booking_beverages (
+    id SERIAL PRIMARY KEY,
+    booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    beverage_id INTEGER NOT NULL REFERENCES beverages(id),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- Extra columns on bookings needed by the UI
+-- (Bug Fix 3 & 4: table_amount, beverage_amount, payment_method
+--  were referenced by queries but never created)
+-- ============================================================
+ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS table_amount   DECIMAL(10,2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS beverage_amount DECIMAL(10,2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS payment_method  VARCHAR(50);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(start_time);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_payment_status ON bookings(payment_status);
+CREATE INDEX IF NOT EXISTS idx_bookings_payment_method ON bookings(payment_method);
+CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_name);
 CREATE INDEX IF NOT EXISTS idx_payment_history_booking ON payment_history(booking_id);
+CREATE INDEX IF NOT EXISTS idx_booking_beverages_booking ON booking_beverages(booking_id);
 
 -- Auto-update timestamp trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
