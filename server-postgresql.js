@@ -178,7 +178,8 @@ app.get('/api/bookings/active', async (req, res) => {
 // Get all bookings with filters
 app.get('/api/bookings', async (req, res) => {
     try {
-        const { status, startDate, endDate, paymentStatus } = req.query;
+        // Bug Fix 1 & 4: Added customer and paymentMethod to destructured query params
+        const { status, startDate, endDate, paymentStatus, customer, paymentMethod } = req.query;
         let query = `
             SELECT b.*, tt.type_code, tt.type_name
             FROM bookings b
@@ -196,6 +197,18 @@ app.get('/api/bookings', async (req, res) => {
         if (paymentStatus) {
             query += ` AND b.payment_status = $${paramCount}`;
             params.push(paymentStatus);
+            paramCount++;
+        }
+        // Bug Fix 1: customer name filter (case-insensitive partial match)
+        if (customer) {
+            query += ` AND LOWER(b.customer_name) LIKE LOWER($${paramCount})`;
+            params.push(`%${customer}%`);
+            paramCount++;
+        }
+        // Bug Fix 4: payment method filter
+        if (paymentMethod) {
+            query += ` AND b.payment_method = $${paramCount}`;
+            params.push(paymentMethod);
             paramCount++;
         }
         if (startDate) {
@@ -245,52 +258,100 @@ app.post('/api/bookings', async (req, res) => {
 });
 
 // End booking session
+// Bug Fix 6: Accept end_time and total_amount from frontend to prevent amount drift
 app.put('/api/bookings/:id/end', async (req, res) => {
+    const client = await pool.connect();
     try {
         const { id } = req.params;
-        const { amount_paid, payment_method, notes, created_by } = req.body;
+        const {
+            amount_paid, payment_method, notes, created_by,
+            end_time, total_amount: clientTotalAmount,
+            beverages = []   // array of { beverage_id, quantity }
+        } = req.body;
 
         const booking = await getQuery('SELECT * FROM bookings WHERE id = $1', [id]);
-        
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        // Calculate duration and total
-        const endTime = new Date();
+        // Bug Fix 6: Use the end time sent by the frontend (captured when modal opened).
+        const endTime = end_time ? new Date(end_time) : new Date();
         const startTime = new Date(booking.start_time);
         const durationMinutes = Math.round((endTime - startTime) / 60000);
         const durationHours = durationMinutes / 60;
-        const totalAmount = (durationHours * booking.price_per_hour).toFixed(2);
+
+        // Calculate table amount from duration
+        const tableAmount = parseFloat((durationHours * booking.price_per_hour).toFixed(2));
+
+        // Calculate beverage amount from line items
+        let beverageAmount = 0;
+        const resolvedBeverages = [];
+        for (const item of beverages) {
+            if (!item.beverage_id) continue;
+            const bev = await getQuery('SELECT * FROM beverages WHERE id = $1', [item.beverage_id]);
+            if (bev) {
+                const qty = parseInt(item.quantity) || 1;
+                beverageAmount += bev.price * qty;
+                resolvedBeverages.push({ beverage_id: bev.id, quantity: qty, unit_price: bev.price });
+            }
+        }
+        beverageAmount = parseFloat(beverageAmount.toFixed(2));
+
+        // Bug Fix 6: Use total_amount sent from client when provided (reflects what was shown in UI).
+        // Server recalculates only as a fallback for backwards compatibility.
+        const totalAmount = clientTotalAmount !== undefined
+            ? parseFloat(parseFloat(clientTotalAmount).toFixed(2))
+            : parseFloat((tableAmount + beverageAmount).toFixed(2));
+
         const paidAmount = parseFloat(amount_paid || 0);
-        const pendingAmount = (totalAmount - paidAmount).toFixed(2);
+        const pendingAmount = parseFloat((totalAmount - paidAmount).toFixed(2));
         const paymentStatus = paidAmount >= totalAmount ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
 
-        await pool.query(`
-            UPDATE bookings 
-            SET end_time = CURRENT_TIMESTAMP,
-                duration_minutes = $1,
-                total_amount = $2,
-                amount_paid = $3,
-                amount_pending = $4,
-                status = 'completed',
-                payment_status = $5,
-                notes = $6
-            WHERE id = $7
-        `, [durationMinutes, totalAmount, paidAmount, pendingAmount, paymentStatus, notes, id]);
+        await client.query('BEGIN');
 
-        // Record payment if any
+        // Update the booking record (now also stores table_amount, beverage_amount, payment_method)
+        await client.query(`
+            UPDATE bookings 
+            SET end_time        = $1,
+                duration_minutes = $2,
+                table_amount     = $3,
+                beverage_amount  = $4,
+                total_amount     = $5,
+                amount_paid      = $6,
+                amount_pending   = $7,
+                status           = 'completed',
+                payment_status   = $8,
+                payment_method   = $9,
+                notes            = $10
+            WHERE id = $11
+        `, [endTime, durationMinutes, tableAmount, beverageAmount, totalAmount,
+            paidAmount, pendingAmount, paymentStatus, payment_method, notes, id]);
+
+        // Persist beverage line items
+        for (const bev of resolvedBeverages) {
+            await client.query(`
+                INSERT INTO booking_beverages (booking_id, beverage_id, quantity, unit_price)
+                VALUES ($1, $2, $3, $4)
+            `, [id, bev.beverage_id, bev.quantity, bev.unit_price]);
+        }
+
+        // Record payment in audit history
         if (paidAmount > 0) {
-            await pool.query(`
+            await client.query(`
                 INSERT INTO payment_history (booking_id, payment_amount, payment_method, notes, recorded_by)
                 VALUES ($1, $2, $3, $4, $5)
             `, [id, paidAmount, payment_method, notes, created_by]);
         }
 
+        await client.query('COMMIT');
+
         const updatedBooking = await getQuery('SELECT * FROM bookings WHERE id = $1', [id]);
         res.json(updatedBooking);
     } catch (err) {
+        await client.query('ROLLBACK');
         res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
     }
 });
 
@@ -482,27 +543,224 @@ app.get('/api/reports/yearly', async (req, res) => {
 });
 
 // Get pending payments
+// Bug Fix 5: Added customer, startDate, endDate filter support
 app.get('/api/reports/pending-payments', async (req, res) => {
     try {
-        const pending = await allQuery(`
+        const { customer, startDate, endDate } = req.query;
+
+        let pendingQuery = `
             SELECT b.*, tt.type_name, tt.type_code
             FROM bookings b
             JOIN table_types tt ON b.table_type_id = tt.id
             WHERE b.payment_status IN ('pending', 'partial')
                 AND b.status = 'completed'
-            ORDER BY b.start_time DESC
-        `);
-
-        const summary = await getQuery(`
+        `;
+        let summaryQuery = `
             SELECT 
                 COUNT(*) as total_count,
                 SUM(amount_pending) as total_pending
-            FROM bookings
+            FROM bookings b
             WHERE payment_status IN ('pending', 'partial')
                 AND status = 'completed'
-        `);
+        `;
+        const pendingParams = [];
+        const summaryParams = [];
+        let paramCount = 1;
+
+        if (customer) {
+            pendingQuery += ` AND LOWER(b.customer_name) LIKE LOWER($${paramCount})`;
+            summaryQuery += ` AND LOWER(b.customer_name) LIKE LOWER($${paramCount})`;
+            pendingParams.push(`%${customer}%`);
+            summaryParams.push(`%${customer}%`);
+            paramCount++;
+        }
+        if (startDate) {
+            pendingQuery += ` AND DATE(b.start_time) >= DATE($${paramCount})`;
+            summaryQuery += ` AND DATE(b.start_time) >= DATE($${paramCount})`;
+            pendingParams.push(startDate);
+            summaryParams.push(startDate);
+            paramCount++;
+        }
+        if (endDate) {
+            pendingQuery += ` AND DATE(b.start_time) <= DATE($${paramCount})`;
+            summaryQuery += ` AND DATE(b.start_time) <= DATE($${paramCount})`;
+            pendingParams.push(endDate);
+            summaryParams.push(endDate);
+            paramCount++;
+        }
+
+        pendingQuery += ' ORDER BY b.start_time DESC';
+
+        const pending = await allQuery(pendingQuery, pendingParams);
+        const summary = await getQuery(summaryQuery, summaryParams);
 
         res.json({ summary, bookings: pending });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============ BEVERAGE ROUTES (Bug Fix 2) ============
+
+// Get all beverages
+app.get('/api/beverages', async (req, res) => {
+    try {
+        const beverages = await allQuery('SELECT * FROM beverages ORDER BY name ASC');
+        res.json(beverages);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Add new beverage
+app.post('/api/beverages', async (req, res) => {
+    try {
+        const { name, price } = req.body;
+        if (!name || price === undefined) {
+            return res.status(400).json({ error: 'Name and price are required' });
+        }
+        const result = await pool.query(
+            'INSERT INTO beverages (name, price) VALUES ($1, $2) RETURNING id',
+            [name, parseFloat(price)]
+        );
+        const newBev = await getQuery('SELECT * FROM beverages WHERE id = $1', [result.rows[0].id]);
+        res.json(newBev);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update beverage
+app.put('/api/beverages/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, price } = req.body;
+        await pool.query(
+            'UPDATE beverages SET name = $1, price = $2 WHERE id = $3',
+            [name, parseFloat(price), id]
+        );
+        const updated = await getQuery('SELECT * FROM beverages WHERE id = $1', [id]);
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete beverage
+app.delete('/api/beverages/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Check if beverage is used in any booking
+        const usageCheck = await getQuery(
+            'SELECT COUNT(*) as count FROM booking_beverages WHERE beverage_id = $1',
+            [id]
+        );
+        if (parseInt(usageCheck.count) > 0) {
+            return res.status(400).json({ error: 'Cannot delete beverage that has been ordered' });
+        }
+        await pool.query('DELETE FROM beverages WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============ TABLE-REVENUE & BEVERAGE-REVENUE REPORTS (Bug Fix 3) ============
+
+// Reports - Table Revenue
+app.get('/api/reports/table-revenue', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const params = [];
+        let paramCount = 1;
+
+        let dateFilter = '';
+        if (startDate) {
+            dateFilter += ` AND DATE(b.start_time) >= DATE($${paramCount})`;
+            params.push(startDate);
+            paramCount++;
+        }
+        if (endDate) {
+            dateFilter += ` AND DATE(b.start_time) <= DATE($${paramCount})`;
+            params.push(endDate);
+            paramCount++;
+        }
+
+        const summary = await getQuery(`
+            SELECT
+                COUNT(*) as total_bookings,
+                COALESCE(SUM(table_amount), 0) as total_revenue
+            FROM bookings b
+            WHERE b.status = 'completed'
+            ${dateFilter}
+        `, params);
+
+        const byTableType = await allQuery(`
+            SELECT
+                tt.type_name,
+                tt.type_code,
+                COUNT(*) as bookings,
+                COALESCE(SUM(b.table_amount), 0) as revenue,
+                COALESCE(SUM(b.duration_minutes), 0) as minutes
+            FROM bookings b
+            JOIN table_types tt ON b.table_type_id = tt.id
+            WHERE b.status = 'completed'
+            ${dateFilter}
+            GROUP BY tt.id, tt.type_name, tt.type_code
+            ORDER BY revenue DESC
+        `, params);
+
+        res.json({ summary, byTableType });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Reports - Beverage Revenue
+app.get('/api/reports/beverage-revenue', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const params = [];
+        let paramCount = 1;
+
+        let dateFilter = '';
+        if (startDate) {
+            dateFilter += ` AND DATE(b.start_time) >= DATE($${paramCount})`;
+            params.push(startDate);
+            paramCount++;
+        }
+        if (endDate) {
+            dateFilter += ` AND DATE(b.start_time) <= DATE($${paramCount})`;
+            params.push(endDate);
+            paramCount++;
+        }
+
+        const summary = await getQuery(`
+            SELECT
+                COALESCE(SUM(bb.quantity * bev.price), 0) as total_beverage_revenue,
+                COUNT(DISTINCT bb.id) as total_orders
+            FROM booking_beverages bb
+            JOIN beverages bev ON bb.beverage_id = bev.id
+            JOIN bookings b ON bb.booking_id = b.id
+            WHERE b.status = 'completed'
+            ${dateFilter}
+        `, params);
+
+        const items = await allQuery(`
+            SELECT
+                bev.name,
+                COALESCE(SUM(bb.quantity), 0) as total_quantity,
+                COALESCE(SUM(bb.quantity * bev.price), 0) as total_revenue
+            FROM booking_beverages bb
+            JOIN beverages bev ON bb.beverage_id = bev.id
+            JOIN bookings b ON bb.booking_id = b.id
+            WHERE b.status = 'completed'
+            ${dateFilter}
+            GROUP BY bev.id, bev.name
+            ORDER BY total_revenue DESC
+        `, params);
+
+        res.json({ summary, items });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
