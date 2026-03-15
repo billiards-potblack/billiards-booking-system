@@ -40,6 +40,28 @@ async function initializeDatabase() {
         const schemaPath = path.join(__dirname, 'database', 'schema-postgresql.sql');
         const schema = fs.readFileSync(schemaPath, 'utf8');
         await pool.query(schema);
+
+        // Create users table if it doesn't exist
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                role VARCHAR(20) NOT NULL DEFAULT 'user',
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Insert default admin if not exists
+        await pool.query(`
+            INSERT INTO users (username, password, full_name, role)
+            VALUES ('admin', 'admin123', 'Administrator', 'admin')
+            ON CONFLICT (username) DO NOTHING;
+        `);
+
         console.log('✓ Database initialized successfully');
     } catch (err) {
         console.error('Error initializing database:', err);
@@ -481,6 +503,90 @@ app.get('/api/reports/pending-payments', async (req, res) => {
         `);
 
         res.json({ summary, bookings: pending });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============ AUTH ROUTES ============
+
+// POST /api/auth/login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        const user = await getQuery(
+            'SELECT * FROM users WHERE username = $1 AND is_active = true',
+            [username]
+        );
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        const { password: _, ...safeUser } = user;
+        res.json(safeUser);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/users
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await allQuery(
+            'SELECT id, username, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC'
+        );
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/users
+app.post('/api/users', async (req, res) => {
+    try {
+        const { username, password, full_name, role } = req.body;
+        if (!username || !password || !role) {
+            return res.status(400).json({ error: 'Username, password, and role are required' });
+        }
+        const result = await pool.query(
+            'INSERT INTO users (username, password, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id',
+            [username, password, full_name || '', role]
+        );
+        res.json({ id: result.rows[0].id, message: 'User created successfully' });
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT /api/users/:id
+app.put('/api/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { password, full_name, role, is_active } = req.body;
+        await pool.query(
+            'UPDATE users SET password = COALESCE($1, password), full_name = COALESCE($2, full_name), role = COALESCE($3, role), is_active = COALESCE($4, is_active), updated_at = NOW() WHERE id = $5',
+            [password || null, full_name || null, role || null, is_active ?? null, id]
+        );
+        res.json({ message: 'User updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE /api/users/:id
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ message: 'User deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
